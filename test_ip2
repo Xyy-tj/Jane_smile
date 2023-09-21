@@ -1,0 +1,50 @@
+import requests
+from concurrent.futures import ThreadPoolExecutor
+import ipapi
+from translate import Translator
+
+def translate_content_ch(city_en, org_en):
+    # 实现英文转中文
+    translator=Translator(to_lang='chinese')
+    city = translator.translate(city_en)
+    org = translator.translate(org_en)
+    return city + org
+
+def check_proxy(protocol, ip, port, available_proxies):
+    try:
+        proxy = {
+            protocol: f'{protocol}://{ip}:{port}'
+        }
+        response = requests.get('https://www.baidu.com', proxies=proxy, timeout=5)
+        if response.status_code == 200:
+            location = ipapi.location(ip)  # 获取IP地址的位置信息
+            city_en = location.get('city', '')
+            org_en = location.get('org', '')
+            result = translate_content_ch(city_en, org_en)
+            print('\033[1;32m' + f'{proxy} is available, location: {result}' + '\033[0m')
+            available_proxies.append(proxy)  # 将可用的代理服务器IP添加到共享列表中
+    except:
+        print('\033[1;31m' + f'{proxy} is not available' + '\033[0m')
+
+if __name__ == '__main__':
+
+    proxies = ['socks5://154.12.95.148:1080',
+               '182.34.35.87:9999',
+               '182.140.244.163:8118',
+               '113.121.37.249:9999',
+               '113.124.85.37:9999',
+               '183.247.221.119:30001',
+               '113.121.21.231:9999',
+               '111.3.102.207:30001',
+               ]  # 代理服务器列表
+    
+    available_proxies = []  # 可用的代理服务器IP列表
+    with ThreadPoolExecutor(max_workers=10) as executor:  # 创建最大并发数为10的线程池
+        for proxy in proxies:
+            try:
+                protocol, address = proxy.split('://')  # 获取协议和地址
+            except ValueError:
+                protocol, address = 'http', proxy
+            ip, port = address.split(':')  # 获取IP地址和端口号
+            executor.submit(check_proxy, protocol, ip, port, available_proxies)  # 提交任务到线程池
+    print(available_proxies)  # 输出可用的代理服务器IP列表

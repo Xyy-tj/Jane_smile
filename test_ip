@@ -1,35 +1,52 @@
+from time import sleep
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+import pandas as pd
+import numpy as np
+import itertools
+import requests
+import json
 
-# Set up the proxy server list
-proxy_list = ["socks5://154.12.95.148:1080"]
-proxy_list = ["111.177.63.86:8888",
-]
 
-# Loop through the proxy servers and test each one
-for proxy in proxy_list:
+
+def get_proxy(headers):
+    #API_url为您在网站上的API
+    API_url = 'http://get.3ip.cn/dmgetip.asp?apikey=37c26b33&pwd=c15287e1366c93e0c5f0ccf7e645112c&getnum=1&httptype=2&geshi=2&fenge=1&fengefu=&Contenttype=1&operate=2'
+    if not API_url:
+        print('出错了:请从www.3ip.cn生成api地址')
+        proxy = {}
+        return proxy
     try:
-        # Set up the Selenium WebDriver with the current proxy server information
-        options = webdriver.EdgeOptions()
-        options.add_argument('--proxy-server={}'.format(proxy))
-        driver = webdriver.Edge(options=options)
-
-        # Navigate to a website to confirm that the proxy server is working
-        driver.get(r'https://www.ip.cn/')
-        
-        # Wait for the target element to be present on the page
-        wait = WebDriverWait(driver, 10)
-        element = wait.until(EC.presence_of_element_located((By.ID, "tab0_address")))
-
-        # Print out the results for the current proxy server
-        print('\033[1;32m' + f"Proxy {proxy} is working! Current IP address: {element.text}" + '\033[0m')
-
-        # Close the browser session
-        driver.quit()
-
+        aaa = requests.get(API_url, headers=headers).text
+        aaa_json = json.loads(aaa)
+        if not aaa_json or aaa_json['code'] != 0:
+            proxy = {}
+        else:
+            proxy_host = aaa_json['data'][0]['ip'] + ':' + str(aaa_json['data'][0]['port'])
+            proxy_city = aaa_json['data'][0]['city']
+            print('代理IP为：'+proxy_host)
+            proxy = 'socks5://' + proxy_host
     except Exception as e:
-        # Print out the error message if the proxy server did not work
-        print(f"Proxy {proxy} is not working: {str(e)}")
-        driver.quit()
+        print('获取代理IP失败：', e)
+        proxy = {}
+    return proxy
+
+
+# proxy_list = ["socks5://154.12.95.148:1080"]
+headers = {
+        'User-Agent': 'Mozilla/4.0 (compatible; MSIE 9.0; Windows NT 6.1)'
+    }
+proxy = get_proxy(headers)
+if not proxy:
+    print('获取代理失败,停止继续执行')
+else:
+    edge_options = webdriver.EdgeOptions()
+    edge_options.add_argument('--proxy-type=http')
+    edge_options.add_argument(f' --proxy-server={proxy}')
+
+    one_driver = webdriver.Edge(options=edge_options)
+    try:
+        one_driver.get(r'http://whatismyipaddress.com')
+        one_driver.implicitly_wait(10)
+    except Exception as e:
+        print(e)
