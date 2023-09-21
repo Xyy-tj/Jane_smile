@@ -1,0 +1,35 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+# Set up the proxy server list
+proxy_list = ["socks5://154.12.95.148:1080"]
+proxy_list = ["111.177.63.86:8888",
+]
+
+# Loop through the proxy servers and test each one
+for proxy in proxy_list:
+    try:
+        # Set up the Selenium WebDriver with the current proxy server information
+        options = webdriver.EdgeOptions()
+        options.add_argument('--proxy-server={}'.format(proxy))
+        driver = webdriver.Edge(options=options)
+
+        # Navigate to a website to confirm that the proxy server is working
+        driver.get(r'https://www.ip.cn/')
+        
+        # Wait for the target element to be present on the page
+        wait = WebDriverWait(driver, 10)
+        element = wait.until(EC.presence_of_element_located((By.ID, "tab0_address")))
+
+        # Print out the results for the current proxy server
+        print('\033[1;32m' + f"Proxy {proxy} is working! Current IP address: {element.text}" + '\033[0m')
+
+        # Close the browser session
+        driver.quit()
+
+    except Exception as e:
+        # Print out the error message if the proxy server did not work
+        print(f"Proxy {proxy} is not working: {str(e)}")
+        driver.quit()
